@@ -305,8 +305,22 @@ export class DashboardVisualizations {
 
         const topDeficit = this.processor.getTopDeficit(10) || [];
         const topSobrestock = this.processor.getTopSobrestock(10) || [];
+        
+        // Obtener productos sin movimiento
+        const productosSinMovimiento = this.analisis.filter(p => 
+            p.Num_Ventas === 0 || p.Num_Ventas == null
+        ).sort((a, b) => b.Stock_Actual - a.Stock_Actual);
+        
+        const top5SinMovimiento = productosSinMovimiento.slice(0, 5);
 
-        return `
+        // Obtener productos críticos (bajo promedio)
+        const productosEstadoCritico = this.analisis.filter(p => 
+            p.Estado === ESTADOS_INVENTARIO.BAJO_PROMEDIO
+        ).sort((a, b) => a.Diferencia - b.Diferencia); // Ordenar por déficit (más negativo primero)
+        
+        const top5Criticos = productosEstadoCritico.slice(0, 5);
+
+        const html = `
             <div style="font-family:Arial; max-width:1200px; margin:20px auto; padding:20px;">
                 <h2 style="color:#2C3E50; margin-bottom:20px;">Resumen Ejecutivo de Inventario</h2>
 
@@ -316,6 +330,11 @@ export class DashboardVisualizations {
                         <div style="color:#2C3E50; font-size:16px; margin-bottom:10px;">Productos Sin Movimiento</div>
                         <div style="font-size:24px; font-weight:bold; margin-bottom:5px; color:#F1C40F;">${productosSinVentas}</div>
                         <div style="font-size:14px; color:#666;">${pctSinVentas}% del inventario no ha tenido ventas</div>
+                        ${productosSinMovimiento.length > 0 ? `
+                            <div style="margin-top:10px; font-size:12px; color:#3498DB; cursor:pointer;" onclick="document.getElementById('ver-sin-movimiento').click();">
+                                🔍 Click para ver detalle
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Tarjeta Productos Críticos -->
@@ -323,6 +342,11 @@ export class DashboardVisualizations {
                         <div style="color:#2C3E50; font-size:16px; margin-bottom:10px;">Productos en Estado Crítico</div>
                         <div style="font-size:24px; font-weight:bold; margin-bottom:5px; color:#E74C3C;">${productosCriticos}</div>
                         <div style="font-size:14px; color:#666;">${pctCriticos}% tienen stock bajo el promedio</div>
+                        ${productosEstadoCritico.length > 0 ? `
+                            <div style="margin-top:10px; font-size:12px; color:#3498DB; cursor:pointer;" onclick="document.getElementById('ver-criticos').click();">
+                                🔍 Click para ver detalle
+                            </div>
+                        ` : ''}
                     </div>
 
                     <!-- Tarjeta Stock Total -->
@@ -333,27 +357,111 @@ export class DashboardVisualizations {
                     </div>
                 </div>
 
+                ${productosSinMovimiento.length > 0 ? `
+                <!-- Sección expandible: Productos sin movimiento -->
+                <details style="background:white; border-radius:10px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); overflow:hidden;">
+                    <summary id="ver-sin-movimiento" style="background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%); color:white; padding:20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; list-style:none;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">📦</span>
+                            <span style="font-weight:600; font-size:18px;">Productos sin ventas registradas:</span>
+                        </div>
+                        <span style="font-size:20px;">▼</span>
+                    </summary>
+                    <div style="padding:20px; background:#FFF8E7;">
+                        <p style="color:#555; margin-bottom:20px; line-height:1.6;">
+                            ${pctSinVentas}% del inventario no ha tenido ventas
+                        </p>
+                        <div style="background:#FEF5E7; border-left:4px solid #F39C12; padding:15px; border-radius:5px;">
+                            ${top5SinMovimiento.map(p => `
+                                <div style="padding:8px 0; border-bottom:1px solid #FCE4BE;">
+                                    <span style="font-weight:600; color:#7D5A07;">• ${p.Producto}</span> 
+                                    <span style="color:#666;">(Código: ${p.Codigo})</span> 
+                                    - Stock actual: <strong style="color:#F39C12;">${p.Stock_Actual.toFixed(1)} kg</strong>
+                                </div>
+                            `).join('')}
+                            ${productosSinMovimiento.length > 5 ? `
+                                <div style="margin-top:10px; padding-top:10px; border-top:2px solid #FCE4BE; color:#F39C12; font-weight:500; text-align:center;">
+                                    + ${productosSinMovimiento.length - 5} productos más sin movimiento
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </details>
+                ` : ''}
+
+                ${productosEstadoCritico.length > 0 ? `
+                <!-- Sección expandible: Productos críticos -->
+                <details style="background:white; border-radius:10px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); overflow:hidden;">
+                    <summary id="ver-criticos" style="background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%); color:white; padding:20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; list-style:none;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:24px;">⚠️</span>
+                            <span style="font-weight:600; font-size:18px;">Productos que requieren atención inmediata:</span>
+                        </div>
+                        <span style="font-size:20px;">▼</span>
+                    </summary>
+                    <div style="padding:20px; background:#FFEBEE;">
+                        <p style="color:#555; margin-bottom:20px; line-height:1.6;">
+                            ${pctCriticos}% del inventario tiene stock por debajo del promedio semanal de ventas
+                        </p>
+                        <div style="background:#FFCDD2; border-left:4px solid #E74C3C; padding:15px; border-radius:5px;">
+                            ${top5Criticos.map(p => {
+                                const deficit = Math.abs(p.Diferencia);
+                                return `
+                                <div style="padding:8px 0; border-bottom:1px solid #FFAB91;">
+                                    <span style="font-weight:600; color:#B71C1C;">• ${p.Producto}</span> 
+                                    <span style="color:#666;">(Código: ${p.Codigo})</span><br>
+                                    <span style="color:#555; font-size:14px; margin-left:15px;">
+                                        Stock: <strong style="color:#E74C3C;">${p.Stock_Actual.toFixed(1)} kg</strong> 
+                                        vs Promedio: <strong>${p.Promedio_Semanal.toFixed(1)} kg</strong> 
+                                        - Déficit: <strong style="color:#D32F2F;">${deficit.toFixed(1)} kg</strong>
+                                    </span>
+                                </div>
+                            `}).join('')}
+                            ${productosEstadoCritico.length > 5 ? `
+                                <div style="margin-top:10px; padding-top:10px; border-top:2px solid #FFAB91; color:#E74C3C; font-weight:500; text-align:center;">
+                                    + ${productosEstadoCritico.length - 5} productos más en estado crítico
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </details>
+                ` : ''}
+
                 <div style="background:#F8F9FA; border-radius:10px; padding:20px;">
-                    <h3 style="color:#2C3E50; margin-bottom:15px;">Recomendaciones Principales</h3>
-                    <ul style="color:#555;">
-                        <li style="margin-bottom:10px;">
-                            <strong>Atención Inmediata:</strong> ${topDeficit.length} productos requieren reposición urgente.
-                        </li>
+                    <h3 style="color:#2C3E50; margin-bottom:15px;">💡 Recomendaciones Principales</h3>
+                    <ul style="color:#555; line-height:1.8;">
+                        ${productosSinMovimiento.length > 0 ? `
+                            <li style="margin-bottom:10px;">
+                                <strong>Productos Sin Movimiento:</strong> Evaluar estrategias para ${productosSinVentas} productos sin ventas recientes.
+                            </li>
+                        ` : ''}
+                        ${productosEstadoCritico.length > 0 ? `
+                            <li style="margin-bottom:10px;">
+                                <strong>Atención Inmediata:</strong> ${productosCriticos} productos requieren reposición urgente.
+                            </li>
+                        ` : ''}
                         <li style="margin-bottom:10px;">
                             <strong>Sobrestock:</strong> ${topSobrestock.length} productos tienen niveles de stock significativamente altos.
                         </li>
                         <li>
-                            <strong>Productos Sin Movimiento:</strong> Evaluar estrategias para ${productosSinVentas} productos sin ventas recientes.
+                            <strong>Stock Total:</strong> ${formatNumber(stats.stock_total_kilos, 0)} kg distribuidos en ${totalProductos} productos únicos.
                         </li>
                     </ul>
                 </div>
             </div>
         `;
+        
+        return html;
     }
+
+
 
     /**
      * Crea tabla HTML de productos críticos (simplificada)
      */
+/**
+ * Crea tabla HTML de productos críticos con filtro por Macropieza
+ */
     createTablaProductosCriticos() {
         if (!this.hasHistorical) {
             return '<p style="text-align:center; color:#666; padding:30px;">No hay datos de análisis disponibles</p>';
@@ -368,12 +476,88 @@ export class DashboardVisualizations {
             return '<p style="text-align:center; color:#2ca02c; font-size:18px; padding:40px;">✅ No hay productos críticos en este momento</p>';
         }
 
+        // Obtener lista única de Macropiezas
+        const macropiezasUnicas = [...new Set(this.analisis.map(p => p.Macropieza || 'Sin clasificar'))].sort();
+
         let html = `
             <div style='margin:20px 0;'>
+                <!-- FILTRO POR MACROPIEZA -->
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-weight: bold; color: #2C3E50;">🔍 Filtrar por Macropieza:</label>
+                    
+                    <div style="position: relative;">
+                        <button id="macropiezaFilterBtn"
+                                style="padding: 10px 15px; border: 2px solid #E74C3C; border-radius: 5px; 
+                                    background: white; cursor: pointer; font-size: 14px; min-width: 200px; text-align: left;">
+                            🏷️ Todas las Macropiezas ▼
+                        </button>
+                        
+                        <!-- Dropdown del filtro -->
+                        <div id="macropiezaFilterDropdown" 
+                            style="display: none; position: absolute; top: 100%; left: 0; z-index: 1000; 
+                                    background: white; border: 2px solid #E74C3C; border-radius: 5px; 
+                                    box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 300px; max-height: 350px; 
+                                    overflow-y: auto; margin-top: 5px;">
+                            
+                            <!-- Buscador dentro del dropdown -->
+                            <div style="padding: 10px; border-bottom: 1px solid #ddd; background: #ffe6e6;">
+                                <input type="text" id="macropiezaSearchFilter" placeholder="Buscar macropieza..." 
+                                    style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px;">
+                            </div>
+                            
+                            <!-- Checkbox "Seleccionar todo" -->
+                            <div style="padding: 10px; border-bottom: 1px solid #ddd; background: #fff5f5;">
+                                <label style="cursor: pointer; font-weight: bold;">
+                                    <input type="checkbox" id="selectAllMacropiezas" checked> 
+                                    (Seleccionar todas)
+                                </label>
+                            </div>
+                            
+                            <!-- Lista de checkboxes -->
+                            <div id="macropiezaCheckboxList" style="padding: 10px;">
+        `;
+
+        // Generar checkboxes de Macropiezas
+        macropiezasUnicas.forEach(macropieza => {
+            const safeId = macropieza.replace(/\s+/g, '_').replace(/\//g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+            html += `
+                                <div class="macropieza-checkbox-item" style="margin-bottom: 5px;">
+                                    <label style="cursor: pointer;">
+                                        <input type="checkbox" class="macro-checkbox" value="${macropieza}" checked>
+                                        ${macropieza}
+                                    </label>
+                                </div>
+            `;
+        });
+
+        html += `
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div style="padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 10px; justify-content: flex-end; background: #fff5f5;">
+                                <button id="clearMacropiezaBtn"
+                                        style="padding: 8px 15px; background: #95A5A6; color: white; 
+                                            border: none; border-radius: 3px; cursor: pointer;">
+                                    Limpiar
+                                </button>
+                                <button id="applyMacropiezaBtn"
+                                        style="padding: 8px 15px; background: #E74C3C; color: white; 
+                                            border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+                                    Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <span id="macropiezaFilterStatus" style="color: #666; font-size: 14px;"></span>
+                </div>
+                
+                <!-- TABLA -->
                 <div style='overflow-x:auto;'>
-                    <table style='width:100%; border-collapse:collapse; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>
+                    <table id="criticosTable" style='width:100%; border-collapse:collapse; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>
                         <thead>
                             <tr style='background-color:#E74C3C; color:white;'>
+                                <th style='padding:12px; text-align:left; border:1px solid #ddd;'>Macropieza</th>
                                 <th style='padding:12px; text-align:left; border:1px solid #ddd;'>Producto</th>
                                 <th style='padding:12px; text-align:right; border:1px solid #ddd;'>Stock Actual</th>
                                 <th style='padding:12px; text-align:right; border:1px solid #ddd;'>Promedio Semanal</th>
@@ -386,14 +570,16 @@ export class DashboardVisualizations {
 
         productosCriticos.forEach(p => {
             const deficit = Math.abs(p.Diferencia);
+            const macropieza = p.Macropieza || 'Sin clasificar';
             html += `
-                <tr style='background-color:#ffe6e6;'>
-                    <td style='padding:10px; border:1px solid #ddd;'>${p.Producto}</td>
-                    <td style='padding:10px; text-align:right; border:1px solid #ddd; font-weight:bold;'>${p.Stock_Actual.toFixed(2)} kg</td>
-                    <td style='padding:10px; text-align:right; border:1px solid #ddd;'>${p.Promedio_Semanal.toFixed(2)} kg</td>
-                    <td style='padding:10px; text-align:right; border:1px solid #ddd; color:#d62728; font-weight:bold;'>${deficit.toFixed(2)} kg</td>
-                    <td style='padding:10px; text-align:right; border:1px solid #ddd;'>${Math.floor(p.Num_Ventas)}</td>
-                </tr>
+                            <tr style='background-color:#ffe6e6;' class="critico-row" data-macropieza="${macropieza}">
+                                <td style='padding:10px; border:1px solid #ddd; font-weight:500;'>${macropieza}</td>
+                                <td style='padding:10px; border:1px solid #ddd;'>${p.Producto}</td>
+                                <td style='padding:10px; text-align:right; border:1px solid #ddd; font-weight:bold;'>${p.Stock_Actual.toFixed(2)} kg</td>
+                                <td style='padding:10px; text-align:right; border:1px solid #ddd;'>${p.Promedio_Semanal.toFixed(2)} kg</td>
+                                <td style='padding:10px; text-align:right; border:1px solid #ddd; color:#d62728; font-weight:bold;'>${deficit.toFixed(2)} kg</td>
+                                <td style='padding:10px; text-align:right; border:1px solid #ddd;'>${Math.floor(p.Num_Ventas)}</td>
+                            </tr>
             `;
         });
 
@@ -401,11 +587,150 @@ export class DashboardVisualizations {
                         </tbody>
                     </table>
                 </div>
+                
+                <div style="margin-top: 15px; text-align: center; color: #666;">
+                    <span id="criticosCount">Mostrando ${productosCriticos.length} productos críticos</span>
+                </div>
             </div>
         `;
 
+        // Configurar event listeners DESPUÉS de renderizar
+        setTimeout(() => {
+            this._setupMacropiezaFilter();
+        }, 100);
+
         return html;
     }
+
+    /**
+     * Configura los event listeners para el filtro de macropiezas
+     */
+    _setupMacropiezaFilter() {
+        const button = document.getElementById('macropiezaFilterBtn');
+        const dropdown = document.getElementById('macropiezaFilterDropdown');
+        const searchInput = document.getElementById('macropiezaSearchFilter');
+        const selectAllCheckbox = document.getElementById('selectAllMacropiezas');
+        const applyBtn = document.getElementById('applyMacropiezaBtn');
+        const clearBtn = document.getElementById('clearMacropiezaBtn');
+        const checkboxes = document.querySelectorAll('.macro-checkbox');
+
+        if (!button || !dropdown) return;
+
+        // Variables para el filtro
+        let allMacropiezas = Array.from(checkboxes).map(cb => cb.value);
+        let selectedMacropiezas = new Set(allMacropiezas);
+
+        // Toggle dropdown
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && e.target !== button) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        // Prevenir que clicks dentro del dropdown lo cierren
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Buscador
+        if (searchInput) {
+            searchInput.addEventListener('keyup', () => {
+                const searchValue = searchInput.value.toUpperCase();
+                const items = document.querySelectorAll('.macropieza-checkbox-item');
+                
+                items.forEach(item => {
+                    const text = item.textContent || item.innerText;
+                    item.style.display = text.toUpperCase().includes(searchValue) ? '' : 'none';
+                });
+            });
+        }
+
+        // Seleccionar todas
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', () => {
+                checkboxes.forEach(cb => {
+                    if (cb.parentElement.parentElement.style.display !== 'none') {
+                        cb.checked = selectAllCheckbox.checked;
+                    }
+                });
+            });
+        }
+
+        // Actualizar "Seleccionar todas" cuando cambia un checkbox individual
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                }
+            });
+        });
+
+        // Botón Limpiar
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                checkboxes.forEach(cb => cb.checked = true);
+                if (selectAllCheckbox) selectAllCheckbox.checked = true;
+                selectedMacropiezas = new Set(allMacropiezas);
+                this._applyMacropiezaFilterLogic(selectedMacropiezas, allMacropiezas, button, dropdown);
+            });
+        }
+
+        // Botón Aplicar
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                selectedMacropiezas.clear();
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        selectedMacropiezas.add(cb.value);
+                    }
+                });
+                this._applyMacropiezaFilterLogic(selectedMacropiezas, allMacropiezas, button, dropdown);
+            });
+        }
+    }
+
+    /**
+     * Lógica para aplicar el filtro de macropiezas
+     */
+    _applyMacropiezaFilterLogic(selectedMacropiezas, allMacropiezas, button, dropdown) {
+        // Actualizar botón
+        if (selectedMacropiezas.size === allMacropiezas.length) {
+            button.textContent = '🏷️ Todas las Macropiezas ▼';
+        } else {
+            button.textContent = `🏷️ Macropiezas (${selectedMacropiezas.size}) ▼`;
+        }
+        
+        // Filtrar tabla
+        const rows = document.querySelectorAll('.critico-row');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const macropieza = row.getAttribute('data-macropieza');
+            if (selectedMacropiezas.has(macropieza)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Actualizar contador
+        const counter = document.getElementById('criticosCount');
+        if (counter) {
+            counter.textContent = `Mostrando ${visibleCount} productos críticos`;
+        }
+        
+        // Cerrar dropdown
+        dropdown.style.display = 'none';
+    }
+
 
     /**
      * Crea tabla HTML de inventario completo (simplificada)
