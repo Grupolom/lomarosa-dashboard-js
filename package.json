@@ -1,0 +1,23 @@
+{
+  "name": "lomarosa-dashboard-js",
+  "version": "1.0.0",
+  "description": "Dashboard de Inventario Lomarosa - Cliente JavaScript puro",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "build": "echo 'No build required - static files only'",
+    "deploy": "echo 'Push to GitHub and enable GitHub Pages'"
+  },
+  "keywords": [
+    "dashboard",
+    "inventory",
+    "excel",
+    "plotly",
+    "lomarosa"
+  ],
+  "author": "Grupo Lom - Data Science Team",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}

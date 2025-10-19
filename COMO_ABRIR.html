@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cómo Abrir el Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        code {
+            background: #2C3E50;
+            color: #2ECC71;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .command {
+            background: #2C3E50;
+            color: #2ECC71;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #764ba2;
+        }
+        ul {
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Cómo Abrir el Dashboard de Lomarosa</h1>
+
+        <div class="error">
+            <h3>❌ ¡IMPORTANTE!</h3>
+            <p><strong>NO</strong> puedes abrir el dashboard haciendo doble click en <code>index.html</code></p>
+            <p>Esto causa errores de CORS por seguridad de los navegadores modernos.</p>
+        </div>
+
+        <h2>✅ Soluciones (Elige una):</h2>
+
+        <!-- OPCIÓN 1: BAT FILE -->
+        <div class="step">
+            <h3>Opción 1: Archivo BAT (Windows) - MÁS FÁCIL ⭐</h3>
+            <p><strong>Paso 1:</strong> Haz doble click en el archivo:</p>
+            <div class="command">INICIAR_SERVIDOR.bat</div>
+            <p><strong>Paso 2:</strong> Espera que aparezca el mensaje "Serving HTTP..."</p>
+            <p><strong>Paso 3:</strong> Abre tu navegador en:</p>
+            <div class="command">http://localhost:8000</div>
+            <div class="warning">
+                ⚠️ <strong>NO cierres</strong> la ventana negra (CMD) mientras uses el dashboard
+            </div>
+        </div>
+
+        <!-- OPCIÓN 2: PYTHON -->
+        <div class="step">
+            <h3>Opción 2: Comando Python</h3>
+            <p><strong>Paso 1:</strong> Abre CMD o PowerShell en esta carpeta</p>
+            <p><strong>Paso 2:</strong> Ejecuta:</p>
+            <div class="command">python -m http.server 8000</div>
+            <p><strong>Paso 3:</strong> Abre tu navegador en:</p>
+            <div class="command">http://localhost:8000</div>
+        </div>
+
+        <!-- OPCIÓN 3: NODE.JS -->
+        <div class="step">
+            <h3>Opción 3: Node.js (si lo tienes instalado)</h3>
+            <p><strong>Paso 1:</strong> Abre CMD o PowerShell en esta carpeta</p>
+            <p><strong>Paso 2:</strong> Ejecuta:</p>
+            <div class="command">npx serve .</div>
+            <p><strong>Paso 3:</strong> Abre la URL que muestra en consola (usualmente http://localhost:3000)</p>
+        </div>
+
+        <!-- OPCIÓN 4: VS CODE -->
+        <div class="step">
+            <h3>Opción 4: Visual Studio Code</h3>
+            <p><strong>Paso 1:</strong> Abre la carpeta en VS Code</p>
+            <p><strong>Paso 2:</strong> Instala la extensión "Live Server"</p>
+            <p><strong>Paso 3:</strong> Click derecho en <code>index.html</code> → "Open with Live Server"</p>
+        </div>
+
+        <!-- VERIFICACIÓN -->
+        <div class="success">
+            <h3>✅ Cómo saber si funcionó:</h3>
+            <ul>
+                <li>El navegador debe abrir en <code>http://localhost:XXXX</code> (NO <code>file://</code>)</li>
+                <li>Debes ver la interfaz del dashboard con el sidebar izquierdo</li>
+                <li>NO deben aparecer errores de CORS en la consola (F12)</li>
+            </ul>
+        </div>
+
+        <!-- PROBLEMAS COMUNES -->
+        <h2>🐛 Problemas Comunes:</h2>
+
+        <div class="warning">
+            <h4>Error: "python no se reconoce como comando"</h4>
+            <p><strong>Solución 1:</strong> Instala Python desde <a href="https://www.python.org/downloads/" target="_blank">python.org</a></p>
+            <p><strong>Solución 2:</strong> Usa otra opción (Node.js, VS Code, etc.)</p>
+        </div>
+
+        <div class="warning">
+            <h4>Error: "Puerto 8000 ya está en uso"</h4>
+            <p>Cambia el puerto en el comando:</p>
+            <div class="command">python -m http.server 8080</div>
+            <p>Y abre: <code>http://localhost:8080</code></p>
+        </div>
+
+        <div class="warning">
+            <h4>La página se ve en blanco</h4>
+            <p><strong>Verifica:</strong></p>
+            <ul>
+                <li>Que la URL sea <code>http://localhost:XXXX</code> (NO file://)</li>
+                <li>Que el servidor esté corriendo (ventana CMD abierta)</li>
+                <li>Abre la consola (F12) y mira si hay errores</li>
+            </ul>
+        </div>
+
+        <hr style="margin: 40px 0;">
+
+        <h2>📚 Más Ayuda:</h2>
+        <p>Lee los archivos:</p>
+        <ul>
+            <li><code>README.md</code> - Documentación completa</li>
+            <li><code>INSTRUCCIONES_USO.md</code> - Guía paso a paso</li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <p><strong>Desarrollado por el equipo de Data Science de Grupo Lom</strong></p>
+        </div>
+    </div>
+</body>
+</html>

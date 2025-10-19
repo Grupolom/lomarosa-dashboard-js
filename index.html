@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Inventario - Lomarosa</title>
+
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+
+    <!-- SheetJS (XLSX) CDN -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="src/css/main.css">
+    <link rel="stylesheet" href="src/css/dashboard.css">
+</head>
+<body>
+    <!-- Sidebar para Upload -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>📊 Dashboard Lomarosa</h2>
+            <p class="subtitle">Análisis de Inventario</p>
+        </div>
+
+        <div class="upload-section">
+            <h3>📂 Cargar Archivos Excel</h3>
+
+            <!-- Upload Zone 1: Inventario -->
+            <div class="upload-zone" id="upload-inventario">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">
+                    <strong>Inventario</strong>
+                    <span>Arrastra INVENTARIO_LOMAROSA.xlsx</span>
+                </div>
+                <input type="file" id="file-inventario" accept=".xlsx" hidden>
+                <button class="btn-upload" onclick="document.getElementById('file-inventario').click()">
+                    Seleccionar archivo
+                </button>
+            </div>
+            <div class="file-status" id="status-inventario">
+                <span class="status-icon">⏳</span>
+                <span class="status-text">Esperando archivo...</span>
+            </div>
+
+            <!-- Upload Zone 2: Consolidado -->
+            <div class="upload-zone" id="upload-consolidado">
+                <div class="upload-icon">📊</div>
+                <div class="upload-text">
+                    <strong>Histórico de Ventas</strong>
+                    <span>Arrastra consolidado.xlsx</span>
+                </div>
+                <input type="file" id="file-consolidado" accept=".xlsx" hidden>
+                <button class="btn-upload" onclick="document.getElementById('file-consolidado').click()">
+                    Seleccionar archivo
+                </button>
+            </div>
+            <div class="file-status" id="status-consolidado">
+                <span class="status-icon">⏳</span>
+                <span class="status-text">Esperando archivo...</span>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+                <button class="btn-primary" id="btn-process" disabled>
+                    🚀 Generar Dashboard
+                </button>
+                <button class="btn-secondary" id="btn-reset">
+                    🔄 Reiniciar
+                </button>
+            </div>
+
+            <!-- Info de Última Actualización -->
+            <div class="last-update" id="last-update">
+                <span class="update-icon">🕒</span>
+                <span class="update-text">Sin datos cargados</span>
+            </div>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="instructions">
+            <h4>📋 Instrucciones</h4>
+            <ol>
+                <li>Carga el archivo de inventario</li>
+                <li>Carga el histórico de ventas</li>
+                <li>Haz click en "Generar Dashboard"</li>
+                <li>Explora los análisis y gráficos</li>
+            </ol>
+        </div>
+    </aside>
+
+    <!-- Main Dashboard Area -->
+    <main class="main-content" id="main-content">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <p>Procesando datos...</p>
+        </div>
+
+        <!-- Mensaje de Bienvenida (se oculta cuando hay datos) -->
+        <div class="welcome-message" id="welcome-message">
+            <div class="welcome-icon">📊</div>
+            <h1>Bienvenido al Dashboard de Inventario</h1>
+            <p>Carga los archivos Excel en el panel izquierdo para comenzar el análisis</p>
+            <div class="welcome-features">
+                <div class="feature">
+                    <span class="feature-icon">📈</span>
+                    <h3>KPIs en Tiempo Real</h3>
+                    <p>Visualiza indicadores clave de inventario</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">📊</span>
+                    <h3>Análisis de Ventas</h3>
+                    <p>Compara stock vs promedio de ventas</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">⚠️</span>
+                    <h3>Alertas Críticas</h3>
+                    <p>Identifica productos que requieren atención</p>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🏬</span>
+                    <h3>Análisis por Ubicación</h3>
+                    <p>Gestiona stock por CAVA 1 y CAVA 2</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Content (se muestra cuando hay datos) -->
+        <div class="dashboard-content" id="dashboard-content" style="display: none;">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <h1>📊 Dashboard de Inventario - Lomarosa</h1>
+                <p class="company-name">Inversiones Agropecuarias Lom SAS</p>
+                <div class="update-badge" id="update-badge">
+                    🕒 Última actualización: <span id="fecha-actualizacion"></span>
+                </div>
+            </div>
+
+            <!-- KPIs Section -->
+            <section class="section">
+                <h2 class="section-title">📈 Indicadores Principales</h2>
+                <div class="chart-container" id="kpi-cards"></div>
+            </section>
+
+            <!-- Alerta Crítica -->
+            <section class="section" id="alerta-section">
+                <div id="alerta-critica"></div>
+            </section>
+
+            <!-- Dashboard Completo 2x2 -->
+            <section class="section">
+                <h2 class="section-title">📊 Análisis Completo de Inventario</h2>
+                <div class="chart-container" id="dashboard-completo"></div>
+            </section>
+
+            <!-- Análisis por Ubicación -->
+            <section class="section section-dark" id="ubicacion-section">
+                <h2 class="section-title-dark">🏬 Análisis por Ubicación de Almacenamiento</h2>
+                <div class="chart-container-dark" id="analisis-ubicacion"></div>
+            </section>
+
+            <!-- Resumen Ejecutivo -->
+            <section class="section">
+                <h2 class="section-title">📋 Resumen Ejecutivo</h2>
+                <div id="resumen-ejecutivo"></div>
+            </section>
+
+            <!-- Tabla de Productos Críticos -->
+            <section class="section">
+                <h2 class="section-title">⚠️ Productos que Requieren Atención Inmediata</h2>
+                <div id="tabla-criticos"></div>
+            </section>
+
+            <!-- Tabla Inventario Completo -->
+            <section class="section">
+                <h2 class="section-title">📦 Inventario Completo Detallado</h2>
+                <div id="tabla-inventario"></div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="dashboard-footer">
+                <p><strong>Dashboard generado automáticamente con JavaScript</strong></p>
+                <p>Sistema de Gestión de Inventario - Inversiones Agropecuarias Lom SAS</p>
+                <p class="footer-credits">Desarrollado por el equipo de Data Science de Grupo Lom</p>
+            </footer>
+        </div>
+    </main>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="src/js/config.js"></script>
+    <script type="module" src="src/js/utils.js"></script>
+    <script type="module" src="src/js/storageManager.js"></script>
+    <script type="module" src="src/js/fileUploader.js"></script>
+    <script type="module" src="src/js/dataProcessor.js"></script>
+    <script type="module" src="src/js/visualizations.js"></script>
+    <script type="module" src="src/js/app.js"></script>
+</body>
+</html>
