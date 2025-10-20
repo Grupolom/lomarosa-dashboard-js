@@ -12,6 +12,7 @@ export class DashboardVisualizations {
         this.stats = dataProcessor.getStatistics();
         this.analisis = dataProcessor.analisis;
         this.hasHistorical = this.analisis !== null && this.analisis.length > 0;
+        this.inventarioBuffer = null;  
     }
 
     /**
@@ -735,78 +736,444 @@ export class DashboardVisualizations {
     /**
      * Crea tabla HTML de inventario completo (simplificada)
      */
+
     createTablaInventarioCompleto() {
-        const df = this.analisis || this.processor.dfProcessed;
-        const tieneHistorico = this.hasHistorical;
+        const productos = this.processor.dfProcessed;
+        
+        if (!productos || productos.length === 0) {
+            return '<p style="text-align:center; color:#666; padding:40px;">No hay datos de inventario disponibles</p>';
+        }
 
         let html = `
             <div style="margin: 30px 0;">
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <thead>
-                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Código</th>
-                                <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Producto</th>
-                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Stock Actual (kg)</th>
-        `;
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="inv-sheet-btn active" data-sheet="CONSOLIDADO" style="padding: 10px 20px; border: 2px solid #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            📦 CONSOLIDADO
+                        </button>
+                        <button class="inv-sheet-btn" data-sheet="CAVA 1" style="padding: 10px 20px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            ❄️ CAVA 1
+                        </button>
+                        <button class="inv-sheet-btn" data-sheet="CAVA 2" style="padding: 10px 20px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            🧊 CAVA 2
+                        </button>
+                        <button class="inv-sheet-btn" data-sheet="CAVA 3" style="padding: 10px 20px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                            🌡️ CAVA 3
+                        </button>
+                    </div>
 
-        if (tieneHistorico) {
-            html += `
-                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Promedio Semanal (kg)</th>
-                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Diferencia (kg)</th>
-                                <th style="padding: 15px; text-align: center; border: 1px solid #ddd;">Estado</th>
-            `;
-        }
-
-        html += `
-                            </tr>
-                        </thead>
-                        <tbody>
-        `;
-
-        // Mostrar primeros 20 productos
-        const productos = df.slice(0, 20);
-
-        productos.forEach(p => {
-            const bgColor = tieneHistorico && p.Estado === ESTADOS_INVENTARIO.BAJO_PROMEDIO ? '#ffe6e6' : '#e6f7e6';
-            const estadoBadgeColor = tieneHistorico && p.Estado === ESTADOS_INVENTARIO.BAJO_PROMEDIO ? '#E74C3C' : '#2ECC71';
-
-            html += `
-                <tr style="background-color: ${bgColor}; border-bottom: 1px solid #ddd;">
-                    <td style="padding: 12px; border: 1px solid #ddd;">${p.Codigo}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 500;">${p.Producto}</td>
-                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd; font-weight: bold;">${p.Stock_Actual.toFixed(2)}</td>
-            `;
-
-            if (tieneHistorico) {
-                const difColor = p.Diferencia < 0 ? '#d62728' : '#2ca02c';
-                html += `
-                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd;">${p.Promedio_Semanal.toFixed(2)}</td>
-                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd; color: ${difColor}; font-weight: bold;">${p.Diferencia.toFixed(2)}</td>
-                    <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
-                        <span style="background: ${estadoBadgeColor}; color: white; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold;">
-                            ${p.Estado}
-                        </span>
-                    </td>
-                `;
-            }
-
-            html += `</tr>`;
-        });
-
-        html += `
-                        </tbody>
-                    </table>
+                    <input type="text" id="searchInventarioSimple" placeholder="🔍 Buscar producto..." 
+                        style="padding: 10px; border: 2px solid #ddd; border-radius: 5px; width: 300px; font-size: 14px;">
                 </div>
+
+                <div id="inventario-table-container">
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            <thead id="inv-thead">
+                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Código</th>
+                                    <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Producto</th>
+                                    <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Total (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inv-tbody">
+                                ${productos.map((p, idx) => `
+                                    <tr class="inventario-simple-row" style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8f9fa'}; border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 12px; border: 1px solid #ddd;">${p.Codigo || ''}</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 500;">${p.Producto || ''}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #ddd; font-weight: bold;">${(p.Stock_Actual || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;">
+                                    <td colspan="2" style="padding: 15px; text-align: right; border: 1px solid #ddd;">TOTAL:</td>
+                                    <td style="padding: 15px; text-align: right; border: 1px solid #ddd; font-size: 16px;">${productos.reduce((sum, p) => sum + (p.Stock_Actual || 0), 0).toFixed(2)} kg</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; text-align: center; color: #666;">
-                    Total: ${df.length} productos (mostrando primeros 20)
+                    <span id="inventarioSimpleCount">Mostrando ${productos.length} productos en CONSOLIDADO</span>
                 </div>
             </div>
         `;
 
+        setTimeout(() => {
+            this._setupInventarioSimple(productos);
+        }, 100);
+
+        return html;
+    }
+    async _setupInventarioSimple(productosConsolidado) {
+        // Obtener el Excel RAW directamente del uploader
+        let excelBuffer = null;
+        
+        if (window.dashboardApp && window.dashboardApp.uploader) {
+            const files = window.dashboardApp.uploader.getFiles();
+            if (files.inventario && files.inventario.arrayBuffer) {
+                excelBuffer = files.inventario.arrayBuffer;
+                console.log('✅ Excel buffer obtenido del uploader');
+            }
+        }
+
+        // Búsqueda
+        const searchInput = document.getElementById('searchInventarioSimple');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('.inventario-simple-row');
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                const currentSheet = document.querySelector('.inv-sheet-btn.active')?.getAttribute('data-sheet') || 'CONSOLIDADO';
+                const tbody = document.getElementById('inv-tbody');
+                const totalRows = tbody ? tbody.querySelectorAll('tr').length : 0;
+                document.getElementById('inventarioSimpleCount').textContent = 
+                    `Mostrando ${visibleCount} de ${totalRows} productos en ${currentSheet}`;
+            });
+        }
+
+        // Botones de cambio de hoja
+        document.querySelectorAll('.inv-sheet-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const sheetName = btn.getAttribute('data-sheet');
+                
+                // Actualizar estilos
+                document.querySelectorAll('.inv-sheet-btn').forEach(b => {
+                    if (b === btn) {
+                        b.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        b.style.color = 'white';
+                        b.classList.add('active');
+                    } else {
+                        b.style.background = 'white';
+                        b.style.color = '#667eea';
+                        b.classList.remove('active');
+                    }
+                });
+
+                const tbody = document.getElementById('inv-tbody');
+
+                if (sheetName === 'CONSOLIDADO') {
+                    // Mostrar CONSOLIDADO
+                    // Para CONSOLIDADO
+                    // Calcular total
+                    const totalKgConsolidado = productosConsolidado.reduce((sum, p) => sum + (p.Stock_Actual || 0), 0);
+
+                    tbody.innerHTML = productosConsolidado.map((p, idx) => `
+                        <tr class="inventario-simple-row" style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8f9fa'}; border-bottom: 1px solid #ddd;">
+                            <td style="padding: 12px; border: 1px solid #ddd;">${p.Codigo || ''}</td>
+                            <td style="padding: 12px; border: 1px solid #ddd; font-weight: 500;">${p.Producto || ''}</td>
+                            <td style="padding: 12px; text-align: right; border: 1px solid #ddd; font-weight: bold;">${(p.Stock_Actual || 0).toFixed(2)}</td>
+                        </tr>
+                    `).join('') + `
+                        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;">
+                            <td colspan="2" style="padding: 15px; text-align: right; border: 1px solid #ddd;">TOTAL:</td>
+                            <td style="padding: 15px; text-align: right; border: 1px solid #ddd; font-size: 16px;">${totalKgConsolidado.toFixed(2)} kg</td>
+                        </tr>
+                    `;
+
+                    
+                    document.getElementById('inventarioSimpleCount').textContent = 
+                        `Mostrando ${productosConsolidado.length} productos en CONSOLIDADO`;
+                        
+                } else if (excelBuffer) {
+                    // Leer hoja específica
+                    try {
+                        const workbook = XLSX.read(excelBuffer, { type: 'array' });
+                        
+                        // ⬇️ CAMBIAR ESTA LÍNEA:
+                        // if (workbook.SheetNames.includes(sheetName)) {
+                        
+                        // ⬇️ POR ESTAS DOS LÍNEAS:
+                        const actualSheetName = workbook.SheetNames.find(name => name.trim() === sheetName.trim());
+                        
+                        if (actualSheetName) {
+                            const sheet = workbook.Sheets[actualSheetName];  // ⬅️ Usar actualSheetName
+                            const data = XLSX.utils.sheet_to_json(sheet, {
+                                header: 1,
+                                range: 9,
+                                defval: ''
+                            });
+                            
+                            if (data.length > 0) {
+                                const headers = data[0].map(h => h ? h.toString().trim() : '');
+                                const rows = data.slice(1).filter(row => row && row.length > 0 && row[0]);
+                                
+                                const codigoIdx = headers.findIndex(h => h.toLowerCase().includes('codigo') || h.toLowerCase().includes('codi'));
+                                const productoIdx = headers.findIndex(h => h.toLowerCase().includes('producto'));
+                                const totalIdx = headers.findIndex(h => h.toLowerCase().includes('total'));
+                                
+                                if (codigoIdx === -1 || productoIdx === -1 || totalIdx === -1) {
+                                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#d32f2f;">No se encontraron las columnas necesarias</td></tr>';
+                                    return;
+                                }
+                                
+                                // Calcular total
+                                let totalKg = 0;
+                                rows.forEach(row => {
+                                    const value = row[totalIdx];
+                                    if (typeof value === 'number') {
+                                        totalKg += value;
+                                    } else if (value && !isNaN(parseFloat(value))) {
+                                        totalKg += parseFloat(value);
+                                    }
+                                });
+
+                                tbody.innerHTML = rows.map((row, idx) => `
+                                    <tr class="inventario-simple-row" style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8f9fa'}; border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 12px; border: 1px solid #ddd;">${row[codigoIdx] || ''}</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 500;">${row[productoIdx] || ''}</td>
+                                        <td style="padding: 12px; text-align: right; border: 1px solid #ddd; font-weight: bold;">${typeof row[totalIdx] === 'number' ? row[totalIdx].toFixed(2) : row[totalIdx] || '0.00'}</td>
+                                    </tr>
+                                `).join('') + `
+                                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;">
+                                        <td colspan="2" style="padding: 15px; text-align: right; border: 1px solid #ddd;">TOTAL:</td>
+                                        <td style="padding: 15px; text-align: right; border: 1px solid #ddd; font-size: 16px;">${totalKg.toFixed(2)} kg</td>
+                                    </tr>
+                                `;
+
+                            
+                                document.getElementById('inventarioSimpleCount').textContent = 
+                                    `Mostrando ${rows.length} productos en ${sheetName}`;
+                            } else {
+                                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#666;">No hay datos en esta hoja</td></tr>';
+                            }
+                        } else {
+                            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:40px; color:#d32f2f;">La hoja ${sheetName} no existe en el archivo</td></tr>`;
+                        }
+                    } catch (error) {
+                        console.error('Error al leer hoja:', error);
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#d32f2f;">Error al cargar datos de la hoja</td></tr>';
+                    }
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:40px; color:#666;">
+                        Reinicia y carga los archivos nuevamente para ver ${sheetName}
+                    </td></tr>`;
+                }
+            });
+        });
+    }
+
+    /**
+     * Crea tabla de análisis por ubicación de almacenamiento
+     */
+    createAnalisisPorUbicacion() {
+        if (!this.hasHistorical) {
+            return '<p style="text-align:center; color:#666; padding:40px;">No hay datos históricos disponibles para análisis por ubicación</p>';
+        }
+
+        // Duplicar productos por CAVA
+        const productos = this.analisis || this.processor.dfProcessed;
+        const productosCavas = [];
+
+        productos.forEach(p => {
+            // CAVA 1 (Congelado)
+            productosCavas.push({
+                ...p,
+                Cava: 'CAVA 1',
+                Tipo: 'Congelado',
+                Semanas_Limite: 4
+            });
+
+            // CAVA 2 (Refrigeración)
+            productosCavas.push({
+                ...p,
+                Cava: 'CAVA 2',
+                Tipo: 'Refrigeración',
+                Semanas_Limite: 0.4
+            });
+
+            // CAVA 3
+            productosCavas.push({
+                ...p,
+                Cava: 'CAVA 3',
+                Tipo: 'Seco',
+                Semanas_Limite: 8
+            });
+        });
+
+        // Calcular semanas de stock y estado
+        productosCavas.forEach(p => {
+            p.Semanas_Stock = p.Promedio_Semanal > 0 ? p.Stock_Actual / p.Promedio_Semanal : 0;
+            
+            if (p.Promedio_Semanal === 0 || !p.Promedio_Semanal) {
+                p.Estado_Ubicacion = 'Sin Ventas';
+            } else if (p.Semanas_Stock >= p.Semanas_Limite) {
+                p.Estado_Ubicacion = 'Sobre Stock';
+            } else if (p.Semanas_Stock > 0) {
+                p.Estado_Ubicacion = 'Stock Adecuado';
+            } else {
+                p.Estado_Ubicacion = 'Stock Bajo';
+            }
+        });
+
+        // Ordenar por Cava y Stock
+        productosCavas.sort((a, b) => {
+            if (a.Cava !== b.Cava) return a.Cava.localeCompare(b.Cava);
+            return b.Stock_Actual - a.Stock_Actual;
+        });
+
+        const html = `
+            <div style="margin: 30px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #667eea;">🏬 Análisis por Ubicación de Almacenamiento</h3>
+                    
+                    <div style="position: relative;">
+                        <button id="cavaFilterBtn" style="padding: 10px 20px; background: white; border: 2px solid #667eea; border-radius: 5px; cursor: pointer; color: #667eea; font-weight: 600; min-width: 200px;">
+                            ❄️ Filtrar CAVAs ▼
+                        </button>
+                        
+                        <div id="cavaFilterDropdown" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 2px solid #667eea; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 250px; z-index: 1000; margin-top: 5px;">
+                            <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                                <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                                    <input type="checkbox" class="cava-checkbox" value="CAVA 1" checked style="margin-right: 10px; cursor: pointer;">
+                                    <span>❄️ CAVA 1 (Congelado)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                                    <input type="checkbox" class="cava-checkbox" value="CAVA 2" checked style="margin-right: 10px; cursor: pointer;">
+                                    <span>🧊 CAVA 2 (Refrigeración)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" class="cava-checkbox" value="CAVA 3" style="margin-right: 10px; cursor: pointer;">
+                                    <span>🌡️ CAVA 3 (Seco)</span>
+                                </label>
+                            </div>
+                            <div style="padding: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                                <button id="cavaApplyBtn" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">
+                                    Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 5px;">
+                    <table id="ubicacionTable" style="width: 100%; border-collapse: collapse; font-size: 14px; background: white;">
+                        <thead>
+                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Código</th>
+                                <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Producto</th>
+                                <th style="padding: 15px; text-align: left; border: 1px solid #ddd;">Ubicación</th>
+                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Stock Actual (kg)</th>
+                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Prom. Ventas/Sem (kg)</th>
+                                <th style="padding: 15px; text-align: right; border: 1px solid #ddd;">Semanas de Stock</th>
+                                <th style="padding: 15px; text-align: center; border: 1px solid #ddd;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ubicacionTableBody">
+                            ${this._renderUbicacionRows(productosCavas, ['CAVA 1', 'CAVA 2'])}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        setTimeout(() => {
+            this._setupUbicacionFilter(productosCavas);
+        }, 100);
+
         return html;
     }
 
+    _renderUbicacionRows(productos, selectedCavas) {
+        let html = '';
+        let currentCava = null;
+
+        const filteredProductos = productos.filter(p => selectedCavas.includes(p.Cava));
+
+        filteredProductos.forEach((p, idx) => {
+            // Header de CAVA
+            if (currentCava !== p.Cava) {
+                currentCava = p.Cava;
+                html += `
+                    <tr style="background: #f0f2ff;">
+                        <td colspan="7" style="padding: 12px; font-weight: bold; color: #667eea; border: 1px solid #000000ff;">
+                            ${p.Tipo} (${p.Cava})
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // Color según estado
+            let bgColor = '#ffffff';
+            if (p.Estado_Ubicacion === 'Sobre Stock') bgColor = '#ffe6e6';
+            else if (p.Estado_Ubicacion === 'Stock Bajo') bgColor = '#fff4e6';
+            else if (p.Estado_Ubicacion === 'Stock Adecuado') bgColor = '#e6ffe6';
+            else bgColor = '#f5f5f5';
+
+            html += `
+                <tr class="ubicacion-row" data-cava="${p.Cava}" style="background: ${bgColor}; border-bottom: 1px solid #ddd;">
+                    <td style="padding: 12px; border: 1px solid #ddd; color: #333;">${p.Codigo || ''}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: 500; color: #333;">${p.Producto}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; color: #333;">${p.Tipo} (${p.Cava})</td>
+                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd; font-weight: bold; color: #333;">${p.Stock_Actual.toFixed(1)}</td>
+                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd; color: #333;">${p.Promedio_Semanal ? p.Promedio_Semanal.toFixed(1) : '0.0'}</td>
+                    <td style="padding: 12px; text-align: right; border: 1px solid #ddd; color: #333;">${p.Semanas_Stock > 0 ? p.Semanas_Stock.toFixed(1) : 'Sin datos'}</td>
+                    <td style="padding: 12px; text-align: center; border: 1px solid #ddd;">
+                        <span style="padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; color: white; background: ${this._getEstadoColorUbicacion(p.Estado_Ubicacion)};">
+                            ${p.Estado_Ubicacion}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        return html || '<tr><td colspan="7" style="text-align:center; padding:40px; color:#666;">No hay datos para mostrar</td></tr>';
+    }
+
+    _getEstadoColorUbicacion(estado) {
+        const colores = {
+            'Sobre Stock': '#E74C3C',
+            'Stock Bajo': '#F39C12',
+            'Stock Adecuado': '#2ECC71',
+            'Sin Ventas': '#95A5A6'
+        };
+        return colores[estado] || '#95A5A6';
+    }
+
+    _setupUbicacionFilter(productos) {
+        const filterBtn = document.getElementById('cavaFilterBtn');
+        const filterDropdown = document.getElementById('cavaFilterDropdown');
+        const applyBtn = document.getElementById('cavaApplyBtn');
+
+        if (!filterBtn || !filterDropdown) return;
+
+        filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterDropdown.style.display = filterDropdown.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!filterDropdown.contains(e.target) && e.target !== filterBtn) {
+                filterDropdown.style.display = 'none';
+            }
+        });
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                const selectedCavas = Array.from(document.querySelectorAll('.cava-checkbox:checked')).map(cb => cb.value);
+                
+                const tbody = document.getElementById('ubicacionTableBody');
+                tbody.innerHTML = this._renderUbicacionRows(productos, selectedCavas);
+                
+                filterDropdown.style.display = 'none';
+                
+                const totalSelected = selectedCavas.length;
+                filterBtn.textContent = totalSelected === 3 ? '❄️ Todas las CAVAs ▼' : `❄️ CAVAs (${totalSelected}) ▼`;
+            });
+        }
+    }
+    
     /**
      * Renderiza todas las visualizaciones
      */
@@ -816,6 +1183,7 @@ export class DashboardVisualizations {
 
         document.getElementById('alerta-critica').innerHTML = this.createAlertaCritica();
         document.getElementById('resumen-ejecutivo').innerHTML = this.createResumenEjecutivo();
+        document.getElementById('analisis-ubicacion').innerHTML = this.createAnalisisPorUbicacion();
         document.getElementById('tabla-criticos').innerHTML = this.createTablaProductosCriticos();
         document.getElementById('tabla-inventario').innerHTML = this.createTablaInventarioCompleto();
     }

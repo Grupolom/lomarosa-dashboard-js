@@ -207,6 +207,19 @@ export class FileUploader {
             await this.storage.saveFile(fileType, arrayBuffer, file.name);
             console.log(`✅ Guardado en IndexedDB`);
 
+            // Guardar también Excel RAW
+            if (fileType === 'inventario') {
+                await this.storage.saveRawExcelFile(fileType, arrayBuffer, file.name);
+            }            
+
+            // Guardar también el Excel RAW completo (con todas las hojas)
+            if (fileType === 'inventario') {
+                console.log(`💾 Guardando Excel RAW completo...`);
+                await this.storage.saveRawExcelFile(fileType, arrayBuffer, file.name);
+                console.log(`✅ Excel RAW completo guardado`);
+            }
+
+
             // Guardar referencia local
             this.files[fileType] = {
                 name: file.name,
