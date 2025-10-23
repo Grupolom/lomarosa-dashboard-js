@@ -219,4 +219,4 @@ MIT License - Ver archivo LICENSE para más detalles.
 
 ---
 
-**Desarrollado con ❤️ por el equipo de Data Science de Grupo Lom**
+**Desarrollado por el equipo de Data Science de Grupo Lom**
