@@ -202,13 +202,13 @@ export class DashboardVisualizations {
 
         const layout = {
             title: {
-                text: '<b>Dashboard de Control de Inventario</b>',
+                text: '<b>Dashboard de Control de Inventario - Análisis por Macropiezas</b>',
                 x: 0.5,
                 y: 0.98,
                 xanchor: 'center',
                 font: { size: 22, color: colors.text }
             },
-            height: 1150,
+            height: 1300,  // ⬅️ AUMENTADO de 1150 a 1300
             showlegend: true,
             template: 'plotly_white',
             barmode: 'group',
@@ -220,23 +220,105 @@ export class DashboardVisualizations {
                 x: 1
             },
             font: { family: 'Arial', size: 11, color: colors.text },
-            margin: { t: 120, b: 60, l: 40, r: 40 },
+            margin: { t: 120, b: 80, l: 60, r: 60 },  // ⬅️ AUMENTADO bottom margin
 
             // Subplots 2x2
-            grid: { rows: 2, columns: 2, pattern: 'independent' },
+            grid: { 
+                rows: 2, 
+                columns: 2, 
+                pattern: 'independent',
+                subplots: [['xy', 'x2y2'], ['x3y3', 'x4y4']],
+                roworder: 'top to bottom'
+            },
 
-            xaxis: { title: 'Producto', tickangle: 45, domain: [0, 0.45] },
-            yaxis: { title: 'Cantidad (kg)', domain: [0.55, 1] },
+            // GRÁFICA 1: Top Sobrestock
+            xaxis: { 
+                title: 'Producto', 
+                tickangle: 45, 
+                domain: [0, 0.45] 
+            },
+            yaxis: { 
+                title: 'Cantidad (kg)', 
+                domain: [0.58, 1]  // ⬅️ CAMBIADO de [0.55, 1] a [0.58, 1]
+            },
 
-            xaxis2: { title: 'Producto', tickangle: 45, domain: [0.55, 1] },
-            yaxis2: { title: 'Cantidad (kg)', domain: [0.55, 1] },
+            // GRÁFICA 2: Top Faltante
+            xaxis2: { 
+                title: 'Producto', 
+                tickangle: 45, 
+                domain: [0.55, 1] 
+            },
+            yaxis2: { 
+                title: 'Cantidad (kg)', 
+                domain: [0.58, 1]  // ⬅️ CAMBIADO de [0.55, 1] a [0.58, 1]
+            },
 
+            // GRÁFICA 3: Pie Chart
             xaxis3: { domain: [0, 0.45], visible: false },
-            yaxis3: { domain: [0, 0.45], visible: false },
+            yaxis3: { domain: [0, 0.42], visible: false },  // ⬅️ CAMBIADO de [0, 0.45]
 
-            xaxis4: { title: 'Producto', tickangle: 45, domain: [0.55, 1] },
-            yaxis4: { title: 'Número de Ventas', domain: [0, 0.45] }
+            // GRÁFICA 4: Top Rotación
+            xaxis4: { 
+                title: 'Producto', 
+                tickangle: 45, 
+                domain: [0.55, 1] 
+            },
+            yaxis4: { 
+                title: 'Número de Ventas', 
+                domain: [0, 0.42]  // ⬅️ CAMBIADO de [0, 0.45]
+            },
+
+            // TÍTULOS ENCIMA DE CADA GRÁFICA
+            annotations: [
+                {
+                    text: '<b>Top 10 Macropiezas con Mayor Sobrestock</b>',
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.225,
+                    y: 1.04,  // ⬅️ AJUSTADO de 1.02 a 1.04
+                    xanchor: 'center',
+                    yanchor: 'bottom',
+                    showarrow: false,
+                    font: { size: 14, color: colors.text }
+                },
+                {
+                    text: '<b>Top 10 Macropiezas con Mayor Faltante</b>',
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.775,
+                    y: 1.04,  // ⬅️ AJUSTADO de 1.02 a 1.04
+                    xanchor: 'center',
+                    yanchor: 'bottom',
+                    showarrow: false,
+                    font: { size: 14, color: colors.text }
+                },
+                {
+                    text: '<b>Distribución del Estado de Inventario</b>',
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.225,
+                    y: 0.46,  // ⬅️ AJUSTADO de 0.50 a 0.46
+                    xanchor: 'center',
+                    yanchor: 'bottom',
+                    showarrow: false,
+                    font: { size: 14, color: colors.text }
+                },
+                {
+                    text: '<b>Productos con Mayor Rotación</b>',
+                    xref: 'paper',
+                    yref: 'paper',
+                    x: 0.775,
+                    y: 0.46,  // ⬅️ AJUSTADO de 0.50 a 0.46
+                    xanchor: 'center',
+                    yanchor: 'bottom',
+                    showarrow: false,
+                    font: { size: 14, color: colors.text }
+                }
+            ]
         };
+
+
+
 
         const config = { responsive: true };
 
