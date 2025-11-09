@@ -184,7 +184,7 @@ export class DashboardVisualizations {
             yaxis: 'y3'
         });
 
-        // GRÁFICA 4: Top Rotación (fila 2, col 2)
+        // GRÁFICA 4: Top Rotación (fila 2, col 2)aasdf
         if (topRotacion && topRotacion.length > 0) {
             traces.push({
                 x: topRotacion.map(p => p.Producto).slice(0, 10),
