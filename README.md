@@ -196,7 +196,7 @@ Diferencia = Stock_Actual - Promedio_Semanal
 
 ## 🐛 Solución de Problemas
 
-### Los gráficos no se muestran
+### Los gráficos no se muestran /
 - Verifica que tienes conexión a internet (CDN de Plotly)
 - Revisa la consola del navegador (F12) para errores
 
